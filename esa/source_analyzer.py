@@ -1,6 +1,21 @@
-'''
-Copyright 2018-2024 Johan Cockx, Matic Kukovec and Kristof Mulier
-'''
+# Copyright © 2018-2026 Johan Cockx
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+
 ################################################################################
 # SOURCE ANALYSER INTERFACE to EMBEETLE                                        #
 #                                                                              #
@@ -415,9 +430,6 @@ class Project:
         build_path = self.project_path
         self.build_path = build_path
 
-        def flags_changed_notifier():
-            self._request_flags_update()
-        
         self._run = run_function
 
         # Set of user file objects to be kept alive
@@ -497,16 +509,13 @@ class Project:
     def set_make_config(self, make_command, env = os.environ):
         #_eprint(f"set make command: {command_list2string(make_command)}")
         _set_make_command(self._handle, make_command, env)
-        self._request_flags_update()
         for arg in make_command:
             if arg.startswith('TOOLPREFIX='):
                 self.set_toolchain_prefix(arg[11:])
-        return
 
     def set_toolchain_prefix(self, prefix):
         #_eprint(f"set toolchain prefix: {prefix}")
         _set_toolchain_prefix(self._handle, prefix)
-        return
 
     # Set the path of the build directory, the directory where the make command
     # will be invoked. A relative build directory will be interpreted as
@@ -518,8 +527,6 @@ class Project:
         #assert False
         _set_build_path(self._handle, path)
         self.build_path = path
-        self._request_flags_update()
-        return
 
     @export
     def set_hdir_mode(self, path, mode, hdir_python_obj=None):
@@ -1223,15 +1230,6 @@ class Project:
     def _get_file_handle(self, path):
         _check_not_in_restricted_callback()
         return lib.ce_get_file_handle(self._handle, _encode(path))
-
-    # Private method to request re-extraction of all flags, for example because
-    # the makefile changed. This will schedule the extraction of the flags in a
-    # background thread.  If the new flags differ from the old flags, schedule a
-    # re-analysis of the file. This function will return immediately: it will
-    # not wait for the flag extraction or analysis to finish.
-    def _request_flags_update(self):
-        _check_not_in_restricted_callback()
-        lib.ce_analyze_make_command(self._handle)
 
     # Private method to report a changed file analysis status.
     def _change_file_analysis_status(self, path, file, old_status, new_status):
@@ -2186,11 +2184,6 @@ def init(so_path, debug_print=print, debug=False):
         ctypes.c_void_p,     # project handle
         ctypes.c_char_p,     # command buffer
         ctypes.c_uint,       # command buffer size
-    ]
-    
-    lib.ce_analyze_make_command.restype = None # void
-    lib.ce_analyze_make_command.argtypes = [
-        ctypes.c_void_p,     # project handle
     ]
     
     lib.ce_edit_file.restype = None # void
